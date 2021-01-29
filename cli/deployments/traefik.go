@@ -105,7 +105,11 @@ func (k Traefik) apply(c *kubernetes.Cluster, ui *ui.UI, options kubernetes.Inst
 
 	// Setup ExternalIPs for platforms where there is no loadbalancer
 	platform := c.GetPlatform()
-	if !platform.HasLoadBalancer() {
+	foundLoadBalancer, err := platform.HasLoadBalancer(c.Kubectl)
+	if err != nil {
+		return errors.Wrap(err, "failed to check loadbalancer presence on the platform")
+	}
+	if !foundLoadBalancer {
 		for i, ip := range platform.ExternalIPs() {
 			helmArgs = append(helmArgs, "--set service.externalIPs["+strconv.Itoa(i)+"]="+ip)
 		}
@@ -128,7 +132,7 @@ func (k Traefik) apply(c *kubernetes.Cluster, ui *ui.UI, options kubernetes.Inst
 		return errors.Wrap(err, "failed waiting Traefik Ingress deployment to come up")
 	}
 
-	if platform.HasLoadBalancer() {
+	if foundLoadBalancer {
 		// TODO: Wait until an IP address is assigned
 	}
 

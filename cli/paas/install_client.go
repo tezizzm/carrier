@@ -151,7 +151,11 @@ func (c *InstallClient) showInstallConfiguration(opts *kubernetes.InstallationOp
 func (c *InstallClient) fillInMissingSystemDomain(domain *kubernetes.InstallationOption) error {
 	if domain.Value.(string) == "" {
 		ip := ""
-		if !c.kubeClient.GetPlatform().HasLoadBalancer() {
+		foundLoadBalancer, err := c.kubeClient.GetPlatform().HasLoadBalancer(c.kubeClient.Kubectl)
+		if err != nil {
+			return errors.Wrap(err, "failed to check loadbalancer presence on the platform")
+		}
+		if !foundLoadBalancer {
 			ips := c.kubeClient.GetPlatform().ExternalIPs()
 			if len(ips) > 0 {
 				ip = ips[0]

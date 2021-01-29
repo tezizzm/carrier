@@ -12,8 +12,17 @@ type Generic struct {
 	InternalIPs, ExternalIP []string
 }
 
-func (k *Generic) HasLoadBalancer() bool {
-	return true
+func (k *Generic) HasLoadBalancer(kube *kubernetes.Clientset) (bool, error) {
+	serviceList, err := kube.CoreV1().Services("").List(context.Background(), metav1.ListOptions{
+		FieldSelector: "metadata.name=traefik",
+	})
+	if len(serviceList.Items) == 0 {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (k *Generic) Describe() string {
