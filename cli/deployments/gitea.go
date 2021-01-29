@@ -56,12 +56,26 @@ func (k Gitea) Describe() string {
 func (k Gitea) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	ui.Note().Msg("Removing Gitea...")
 
+	message := "Deleting Gitea namespace " + GiteaDeploymentID
+	warning, err := helpers.WaitForCommandCompletion(ui, message,
+		func() (string, error) {
+			return c.DeleteNamespaceIfOwned(GiteaDeploymentID)
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "Failed deleting namespace %s", GiteaDeploymentID)
+	}
+	if warning != "" {
+		ui.Exclamation().Msg(warning)
+		return nil
+	}
+
 	currentdir, err := os.Getwd()
 	if err != nil {
 		return errors.New("Failed uninstalling Gitea: " + err.Error())
 	}
 
-	message := "Removing helm release " + GiteaDeploymentID
+	message = "Removing helm release " + GiteaDeploymentID
 	out, err := helpers.WaitForCommandCompletion(ui, message,
 		func() (string, error) {
 			helmCmd := fmt.Sprintf("helm uninstall gitea --namespace %s", GiteaDeploymentID)
@@ -74,19 +88,6 @@ func (k Gitea) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 		} else {
 			return errors.Wrapf(err, "Failed uninstalling helm release %s: %s", GiteaDeploymentID, out)
 		}
-	}
-
-	message = "Deleting Gitea namespace " + GiteaDeploymentID
-	warning, err := helpers.WaitForCommandCompletion(ui, message,
-		func() (string, error) {
-			return c.DeleteNamespaceIfOwned(GiteaDeploymentID)
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "Failed deleting namespace %s", GiteaDeploymentID)
-	}
-	if warning != "" {
-		ui.Exclamation().Msg(warning)
 	}
 
 	ui.Success().Msg("Gitea removed")

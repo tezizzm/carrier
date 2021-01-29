@@ -65,25 +65,6 @@ func (k Eirini) Describe() string {
 func (k Eirini) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	ui.Note().Msg("Removing Eirini...")
 
-	releaseDir, err := k.ExtractRelease()
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(releaseDir)
-
-	for _, component := range []string{"core", "events", "metrics", "workloads", "workloads/core"} {
-		message := "Removing Eirini " + component
-		out, err := helpers.WaitForCommandCompletion(ui, message,
-			func() (string, error) {
-				dir := path.Join(releaseDir, "deploy", component)
-				return helpers.Kubectl("delete --ignore-not-found=true --wait=false -f " + dir)
-			},
-		)
-		if err != nil {
-			return errors.Wrapf(err, "%s failed:\n%s", message, out)
-		}
-	}
-
 	// Delete namespaces last
 	for _, namespace := range []string{eiriniCoreNamespace, eiriniWorkLoadsNamespace, eiriniIngressNamespace} {
 		message := "Deleting Eirini namespace " + namespace
@@ -97,6 +78,7 @@ func (k Eirini) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 		}
 		if warning != "" {
 			ui.Exclamation().Msg(warning)
+			return nil
 		}
 	}
 
@@ -125,6 +107,25 @@ func (k Eirini) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	}
 	if warning != "" {
 		ui.Exclamation().Msg(warning)
+	}
+
+	releaseDir, err := k.ExtractRelease()
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(releaseDir)
+
+	for _, component := range []string{"core", "events", "metrics", "workloads", "workloads/core"} {
+		message := "Removing Eirini " + component
+		out, err := helpers.WaitForCommandCompletion(ui, message,
+			func() (string, error) {
+				dir := path.Join(releaseDir, "deploy", component)
+				return helpers.Kubectl("delete --ignore-not-found=true --wait=false -f " + dir)
+			},
+		)
+		if err != nil {
+			return errors.Wrapf(err, "%s failed:\n%s", message, out)
+		}
 	}
 
 	ui.Success().Msg("Eirini removed")

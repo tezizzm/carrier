@@ -57,12 +57,26 @@ func (k Registry) Describe() string {
 func (k Registry) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	ui.Note().Msg("Removing Registry...")
 
+	message := "Deleting Registry namespace " + RegistryDeploymentID
+	warning, err := helpers.WaitForCommandCompletion(ui, message,
+		func() (string, error) {
+			return c.DeleteNamespaceIfOwned(RegistryDeploymentID)
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "Failed deleting namespace %s", RegistryDeploymentID)
+	}
+	if warning != "" {
+		ui.Exclamation().Msg(warning)
+		return nil
+	}
+
 	currentdir, err := os.Getwd()
 	if err != nil {
 		return errors.New("Failed uninstalling Registry: " + err.Error())
 	}
 
-	message := "Removing helm release " + RegistryDeploymentID
+	message = "Removing helm release " + RegistryDeploymentID
 	out, err := helpers.WaitForCommandCompletion(ui, message,
 		func() (string, error) {
 			helmCmd := fmt.Sprintf("helm uninstall '%s' --namespace '%s'", RegistryDeploymentID, RegistryDeploymentID)
@@ -75,19 +89,6 @@ func (k Registry) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 		} else {
 			return errors.Wrapf(err, "Failed uninstalling helm release %s: %s", RegistryDeploymentID, out)
 		}
-	}
-
-	message = "Deleting Registry namespace " + RegistryDeploymentID
-	warning, err := helpers.WaitForCommandCompletion(ui, message,
-		func() (string, error) {
-			return c.DeleteNamespaceIfOwned(RegistryDeploymentID)
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "Failed deleting namespace %s", RegistryDeploymentID)
-	}
-	if warning != "" {
-		ui.Exclamation().Msg(warning)
 	}
 
 	ui.Success().Msg("Registry removed")

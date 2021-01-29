@@ -49,12 +49,26 @@ func (k Quarks) Describe() string {
 func (k Quarks) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	ui.Note().Msg("Removing Quarks...")
 
+	message := "Deleting Quarks namespace " + QuarksDeploymentID
+	warning, err := helpers.WaitForCommandCompletion(ui, message,
+		func() (string, error) {
+			return c.DeleteNamespaceIfOwned(QuarksDeploymentID)
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "Failed deleting namespace %s", QuarksDeploymentID)
+	}
+	if warning != "" {
+		ui.Exclamation().Msg(warning)
+		return nil
+	}
+
 	currentdir, err := os.Getwd()
 	if err != nil {
 		return errors.New("Failed uninstalling Quarks: " + err.Error())
 	}
 
-	message := "Removing helm release " + QuarksDeploymentID
+	message = "Removing helm release " + QuarksDeploymentID
 	out, err := helpers.WaitForCommandCompletion(ui, message,
 		func() (string, error) {
 			helmCmd := fmt.Sprintf("helm uninstall quarks --namespace %s", QuarksDeploymentID)
@@ -67,19 +81,6 @@ func (k Quarks) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 		} else {
 			return errors.New("Failed uninstalling Quarks: " + out)
 		}
-	}
-
-	message = "Deleting Quarks namespace " + QuarksDeploymentID
-	warning, err := helpers.WaitForCommandCompletion(ui, message,
-		func() (string, error) {
-			return c.DeleteNamespaceIfOwned(QuarksDeploymentID)
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "Failed deleting namespace %s", QuarksDeploymentID)
-	}
-	if warning != "" {
-		ui.Exclamation().Msg(warning)
 	}
 
 	for _, crd := range []string{

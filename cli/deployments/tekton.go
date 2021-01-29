@@ -69,19 +69,6 @@ func (k Tekton) Describe() string {
 func (k Tekton) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	ui.Note().Msg("Removing Tekton...")
 
-	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonDashboardYamlPath, true); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonDashboardYamlPath, out))
-	}
-	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonAdminRoleYamlPath, true); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonAdminRoleYamlPath, out))
-	}
-	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonTriggersReleaseYamlPath, true); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonTriggersReleaseYamlPath, out))
-	}
-	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonPipelineReleaseYamlPath, true); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonPipelineReleaseYamlPath, out))
-	}
-
 	message := "Deleting Tekton namespace " + tektonNamespace
 	warning, err := helpers.WaitForCommandCompletion(ui, message,
 		func() (string, error) {
@@ -93,6 +80,20 @@ func (k Tekton) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	}
 	if warning != "" {
 		ui.Exclamation().Msg(warning)
+		return nil
+	}
+
+	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonDashboardYamlPath, true); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonDashboardYamlPath, out))
+	}
+	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonAdminRoleYamlPath, true); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonAdminRoleYamlPath, out))
+	}
+	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonTriggersReleaseYamlPath, true); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonTriggersReleaseYamlPath, out))
+	}
+	if out, err := helpers.KubectlDeleteEmbeddedYaml(tektonPipelineReleaseYamlPath, true); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Deleting %s failed:\n%s", tektonPipelineReleaseYamlPath, out))
 	}
 
 	ui.Success().Msg("Tekton removed")

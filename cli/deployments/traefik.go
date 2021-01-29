@@ -50,12 +50,26 @@ func (k Traefik) Describe() string {
 func (k Traefik) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 	ui.Note().Msg("Removing Traefik...")
 
+	message := "Deleting Traefik namespace " + TraefikDeploymentID
+	warning, err := helpers.WaitForCommandCompletion(ui, message,
+		func() (string, error) {
+			return c.DeleteNamespaceIfOwned(TraefikDeploymentID)
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "Failed deleting namespace %s", TraefikDeploymentID)
+	}
+	if warning != "" {
+		ui.Exclamation().Msg(warning)
+		return nil
+	}
+
 	currentdir, err := os.Getwd()
 	if err != nil {
 		return errors.New("Failed uninstalling Traefik: " + err.Error())
 	}
 
-	message := "Removing helm release " + TraefikDeploymentID
+	message = "Removing helm release " + TraefikDeploymentID
 	out, err := helpers.WaitForCommandCompletion(ui, message,
 		func() (string, error) {
 			helmCmd := fmt.Sprintf("helm uninstall traefik --namespace '%s'", TraefikDeploymentID)
@@ -68,19 +82,6 @@ func (k Traefik) Delete(c *kubernetes.Cluster, ui *ui.UI) error {
 		} else {
 			return errors.Wrapf(err, "Failed uninstalling helm release %s: %s", TraefikDeploymentID, out)
 		}
-	}
-
-	message = "Deleting Traefik namespace " + TraefikDeploymentID
-	warning, err := helpers.WaitForCommandCompletion(ui, message,
-		func() (string, error) {
-			return c.DeleteNamespaceIfOwned(TraefikDeploymentID)
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "Failed deleting namespace %s", TraefikDeploymentID)
-	}
-	if warning != "" {
-		ui.Exclamation().Msg(warning)
 	}
 
 	ui.Success().Msg("Traefik removed")
